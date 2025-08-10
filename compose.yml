@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    ports: 
+      - 5431:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: go-money
+    volumes:
+      - db:/var/lib/postgresql/data
+volumes:
+  db:
+    driver: local
