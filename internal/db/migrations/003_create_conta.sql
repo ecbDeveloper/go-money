@@ -1,8 +1,9 @@
 -- Write your migrate up statements here
 CREATE TABLE IF NOT EXISTS conta (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-	saldo DECIMAL DEFAULT 0,
-	owner_id UUID NOT NULL REFERENCES usuario(id)
+	saldo  DECIMAL(15,2) DEFAULT 0,
+	id_cliente UUID NOT NULL REFERENCES cliente(id) ON DELETE CASCADE,
+	data_abertura TIMESTAMPTZ DEFAULT now()
 );
 ---- create above / drop below ----
 DROP TABLE IF EXISTS conta;
