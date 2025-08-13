@@ -6,3 +6,7 @@ INSERT INTO cliente	(
 	password
 	) VALUES ($1, $2, $3, $4)
 RETURNING id;
+
+-- name: GetClientByEmail :one
+SELECT * FROM cliente
+WHERE email = $1;

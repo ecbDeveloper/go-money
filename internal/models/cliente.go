@@ -92,3 +92,24 @@ func (req CreateClient) Validate() map[string]string {
 
 	return errors
 }
+
+type AuthenticateClient struct {
+	Email string `json:"email"`
+	Senha string `json:"senha"`
+}
+
+func (req AuthenticateClient) Validate() map[string]string {
+	errors := make(map[string]string)
+
+	if !shared.NotBlank(req.Email) {
+		errors["email"] = "esse campo precisa ser preenchido"
+	} else if !shared.IsEmail(req.Email) {
+		errors["email"] = "esse campo precisa ser um email válido"
+	}
+
+	if !shared.NotBlank(req.Senha) {
+		errors["senha"] = "esse campo precisa ser preenchido"
+	}
+
+	return errors
+}
