@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -38,6 +39,7 @@ func main() {
 
 	api.BindRoutes()
 
+	log.Println("api started on port :8082")
 	if err := http.ListenAndServe(":8082", api.Router); err != nil {
 		panic(err)
 	}
