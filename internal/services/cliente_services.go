@@ -7,6 +7,7 @@ import (
 	"github.com/ecbDeveloper/go-money/internal/db/sqlc"
 	"github.com/ecbDeveloper/go-money/internal/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,26 +15,27 @@ import (
 )
 
 var (
-	ErrInvalidCategory = errors.New("you need to select a valid category")
-	ErrDuplicateEmail  = errors.New("this email is already in use")
-	ErrDuplicateCPF    = errors.New("this cpf is already in use")
-	ErrDuplicateCNPJ   = errors.New("this cnpj is already in use")
+	ErrInvalidCategory    = errors.New("you need to select a valid category")
+	ErrDuplicateEmail     = errors.New("this email is already in use")
+	ErrDuplicateCPF       = errors.New("this cpf is already in use")
+	ErrDuplicateCNPJ      = errors.New("this cnpj is already in use")
+	ErrInvalidCredentials = errors.New("email or password is incorrect")
 )
 
-type UserService struct {
+type ClientService struct {
 	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
-func NewUserService(pool *pgxpool.Pool) *UserService {
-	return &UserService{
+func NewClientService(pool *pgxpool.Pool) ClientService {
+	return ClientService{
 		pool:    pool,
 		queries: sqlc.New(pool),
 	}
 }
 
-func (u *UserService) CreateClient(ctx context.Context, client models.CreateClient) (uuid.UUID, error) {
-	tx, err := u.pool.Begin(ctx)
+func (c *ClientService) CreateClient(ctx context.Context, client models.CreateClient) (uuid.UUID, error) {
+	tx, err := c.pool.Begin(ctx)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
@@ -116,4 +118,26 @@ func (u *UserService) CreateClient(ctx context.Context, client models.CreateClie
 	}
 
 	return clientId, nil
+}
+
+func (c *ClientService) AuthenticateClient(ctx context.Context, email, password string) (uuid.UUID, error) {
+	client, err := c.queries.GetClientByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.UUID{}, ErrInvalidCredentials
+		}
+
+		return uuid.UUID{}, err
+	}
+
+	err = bcrypt.CompareHashAndPassword(client.Password, []byte(password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return uuid.UUID{}, ErrInvalidCredentials
+		}
+
+		return uuid.UUID{}, err
+	}
+
+	return client.ID, nil
 }

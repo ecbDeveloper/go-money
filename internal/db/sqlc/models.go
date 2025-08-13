@@ -48,6 +48,12 @@ type PessoaJuridica struct {
 	Cnpj         string    `json:"cnpj"`
 }
 
+type Session struct {
+	Token  string    `json:"token"`
+	Data   []byte    `json:"data"`
+	Expiry time.Time `json:"expiry"`
+}
+
 type TipoTransferencium struct {
 	ID   int32       `json:"id"`
 	Tipo pgtype.Text `json:"tipo"`

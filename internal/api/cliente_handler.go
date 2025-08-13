@@ -11,6 +11,8 @@ import (
 )
 
 func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	var client models.CreateClient
 	err := json.NewDecoder(r.Body).Decode(&client)
 	if err != nil {
@@ -21,13 +23,13 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 
 	validationErrs := client.Validate()
 	if len(validationErrs) > 0 {
-		w.Header().Set("Content-Type", "application/json")
+
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(validationErrs)
 		return
 	}
 
-	clientId, err := api.UserService.CreateClient(r.Context(), client)
+	clientId, err := api.ClientService.CreateClient(r.Context(), client)
 	if err != nil {
 		slog.Error("failed to create client", "error", err)
 
@@ -59,7 +61,55 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 		"id_cliente": clientId,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
+}
+
+func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var credentials models.AuthenticateClient
+	err := json.NewDecoder(r.Body).Decode(&credentials)
+	if err != nil {
+		slog.Error("failed to decode request body", "error", err)
+		http.Error(w, "requisição inválida", http.StatusBadRequest)
+		return
+	}
+
+	errs := credentials.Validate()
+	if len(errs) > 0 {
+
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(errs)
+		return
+	}
+
+	clientId, err := api.ClientService.AuthenticateClient(r.Context(), credentials.Email, credentials.Senha)
+	if err != nil {
+		slog.Error("failed to authenticate client", "error", err)
+		if errors.Is(err, services.ErrInvalidCredentials) {
+			http.Error(w, "credenciais incorretas, tente novamente", http.StatusUnauthorized)
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "erro interno inesperado no servidor",
+		})
+		return
+	}
+
+	err = api.Sessions.RenewToken(r.Context())
+	if err != nil {
+		slog.Error("failed to renew session token", "error", err)
+		http.Error(w, "erro interno inesperado no servidor", http.StatusInternalServerError)
+		return
+	}
+
+	api.Sessions.Put(r.Context(), "AuthenticatedClient", clientId)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"mensagem": "cliente logado com sucesso",
+	})
 }

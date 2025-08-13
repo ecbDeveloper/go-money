@@ -40,3 +40,22 @@ func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (uui
 	err := row.Scan(&id)
 	return id, err
 }
+
+const getClientByEmail = `-- name: GetClientByEmail :one
+SELECT id, categoria_cliente, password, telefone, email, data_cadastro FROM cliente
+WHERE email = $1
+`
+
+func (q *Queries) GetClientByEmail(ctx context.Context, email string) (Cliente, error) {
+	row := q.db.QueryRow(ctx, getClientByEmail, email)
+	var i Cliente
+	err := row.Scan(
+		&i.ID,
+		&i.CategoriaCliente,
+		&i.Password,
+		&i.Telefone,
+		&i.Email,
+		&i.DataCadastro,
+	)
+	return i, err
+}

@@ -9,17 +9,18 @@ import (
 )
 
 func (api *Api) BindRoutes() {
-	api.Router.Use(middleware.RequestID, middleware.Logger, middleware.Recoverer)
+	api.Router.Use(middleware.RequestID, middleware.Logger, middleware.Recoverer, api.Sessions.LoadAndSave)
 
-	csrfMiddleware := csrf.Protect(
+	_ = csrf.Protect(
 		[]byte(os.Getenv("CSRF_SECRET")),
 		csrf.Secure(false),
 	)
 
-	api.Router.Use(csrfMiddleware)
+	// api.Router.Use(csrfMiddleware)
 
 	api.Router.Route("/api/v1", func(r chi.Router) {
 		r.Post("/client", api.handleCreateClient)
-
+		r.Post("/client/login", api.handleLoginClient)
+		r.Post("/account", api.handleCreateAccount)
 	})
 }

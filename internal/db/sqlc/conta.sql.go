@@ -11,11 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
-const createAccount = `-- name: CreateAccount :exec
+const createAccount = `-- name: CreateAccount :one
 INSERT INTO conta (id_cliente) VALUES ($1)
+RETURNING id
 `
 
-func (q *Queries) CreateAccount(ctx context.Context, idCliente uuid.UUID) error {
-	_, err := q.db.Exec(ctx, createAccount, idCliente)
-	return err
+func (q *Queries) CreateAccount(ctx context.Context, idCliente uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createAccount, idCliente)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
