@@ -7,11 +7,17 @@ import (
 	"github.com/ecbDeveloper/go-money/internal/db/sqlc"
 	"github.com/ecbDeveloper/go-money/internal/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	ErrInvalidCategory = errors.New("you need to select a valid category")
+	ErrDuplicateEmail  = errors.New("this email is already in use")
+	ErrDuplicateCPF    = errors.New("this cpf is already in use")
+	ErrDuplicateCNPJ   = errors.New("this cnpj is already in use")
 )
 
 type UserService struct {
@@ -26,7 +32,7 @@ func NewUserService(pool *pgxpool.Pool) *UserService {
 	}
 }
 
-func (u *UserService) CreateUsuarioAndConta(ctx context.Context, client models.CreateClient) (uuid.UUID, error) {
+func (u *UserService) CreateClient(ctx context.Context, client models.CreateClient) (uuid.UUID, error) {
 	tx, err := u.pool.Begin(ctx)
 	if err != nil {
 		return uuid.UUID{}, err
@@ -34,20 +40,33 @@ func (u *UserService) CreateUsuarioAndConta(ctx context.Context, client models.C
 
 	queries := sqlc.New(tx)
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(client.Senha), 10)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
 	arguments := sqlc.CreateClientParams{
-		CategoriaCliente: client.Categoria,
-		Telefone:         client.Telefone,
-		Email:            client.Email,
+		CategoriaCliente: pgtype.Int4{
+			Int32: client.Categoria,
+			Valid: true,
+		},
+		Telefone: client.Telefone,
+		Email:    client.Email,
+		Password: hashedPassword,
 	}
 
 	clientId, err := queries.CreateClient(ctx, arguments)
 	if err != nil {
-		// TODO VALIDAR SE TELEFONE E EMAIL E UNIQUE
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "23505" {
+				return uuid.UUID{}, ErrDuplicateEmail
+			}
+		}
 		tx.Rollback(ctx)
 		return uuid.UUID{}, err
 	}
 
-	switch client.Categoria.Int32 {
+	switch client.Categoria {
 	case 1:
 		arguments := sqlc.CreatePessoaFisicaParams{
 			IDCliente:      clientId,
@@ -58,7 +77,12 @@ func (u *UserService) CreateUsuarioAndConta(ctx context.Context, client models.C
 
 		err = queries.CreatePessoaFisica(ctx, arguments)
 		if err != nil {
-			// TODO VALIDAR CPF SE É UNIQUE
+			if pgErr, ok := err.(*pgconn.PgError); ok {
+				if pgErr.Code == "23505" {
+					return uuid.UUID{}, ErrDuplicateCPF
+				}
+			}
+
 			tx.Rollback(ctx)
 			return uuid.UUID{}, err
 		}
@@ -73,8 +97,13 @@ func (u *UserService) CreateUsuarioAndConta(ctx context.Context, client models.C
 
 		err = queries.CreatePessoaJuridica(ctx, arguments)
 		if err != nil {
+			if pgErr, ok := err.(*pgconn.PgError); ok {
+				if pgErr.Code == "23505" {
+					return uuid.UUID{}, ErrDuplicateCNPJ
+				}
+			}
+
 			tx.Rollback(ctx)
-			//TODO VALIDAR SE CNPJ E UNIQUE
 			return uuid.UUID{}, err
 		}
 
