@@ -19,6 +19,7 @@ type CategoriaCliente struct {
 type Cliente struct {
 	ID               uuid.UUID          `json:"id"`
 	CategoriaCliente pgtype.Int4        `json:"categoria_cliente"`
+	Password         []byte             `json:"password"`
 	Telefone         string             `json:"telefone"`
 	Email            string             `json:"email"`
 	DataCadastro     pgtype.Timestamptz `json:"data_cadastro"`

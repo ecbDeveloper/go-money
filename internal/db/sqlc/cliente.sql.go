@@ -16,8 +16,9 @@ const createClient = `-- name: CreateClient :one
 INSERT INTO cliente	(
 	categoria_cliente, 
 	telefone,
-	email
-	) VALUES ($1, $2, $3)
+	email,
+	password
+	) VALUES ($1, $2, $3, $4)
 RETURNING id
 `
 
@@ -25,10 +26,16 @@ type CreateClientParams struct {
 	CategoriaCliente pgtype.Int4 `json:"categoria_cliente"`
 	Telefone         string      `json:"telefone"`
 	Email            string      `json:"email"`
+	Password         []byte      `json:"password"`
 }
 
 func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, createClient, arg.CategoriaCliente, arg.Telefone, arg.Email)
+	row := q.db.QueryRow(ctx, createClient,
+		arg.CategoriaCliente,
+		arg.Telefone,
+		arg.Email,
+		arg.Password,
+	)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err

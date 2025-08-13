@@ -2,6 +2,7 @@
 INSERT INTO cliente	(
 	categoria_cliente, 
 	telefone,
-	email
-	) VALUES ($1, $2, $3)
+	email,
+	password
+	) VALUES ($1, $2, $3, $4)
 RETURNING id;
