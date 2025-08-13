@@ -1,17 +1,16 @@
 package models
 
 import (
-	"context"
 	"time"
 
 	"github.com/ecbDeveloper/go-money/internal/shared"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CreateClient struct {
-	Categoria      pgtype.Int4     `json:"categoria"`
+	Categoria      int32           `json:"categoria"`
 	Telefone       string          `json:"telefone"`
 	Email          string          `json:"email"`
+	Senha          string          `json:"senha"`
 	PessoaFisica   *PessoaFisica   `json:"pessoa_fisica"`
 	PessoaJuridica *PessoaJuridica `json:"pessoa_juridica"`
 }
@@ -28,23 +27,68 @@ type PessoaJuridica struct {
 	Cnpj         string    `json:"cnpj"`
 }
 
-func (req CreateClient) Valid(context.Context) shared.ErrorsValidator {
-	var eval shared.ErrorsValidator
+func (req CreateClient) Validate() map[string]string {
+	errors := make(map[string]string)
 
-	eval.CheckField(req.Categoria.Int32 > 0 && req.Categoria.Int32 < 3, "categoria", "esse campo precisa ser uma categoria valida")
+	if req.Categoria < 1 || req.Categoria > 2 {
+		errors["categoria"] = "esse campo precisa ser uma categoria valida"
+	}
 
-	eval.CheckField(shared.IsEmail(req.Email), "email", "esse campo precisa ser um email válido")
+	if req.Categoria == 1 && req.PessoaFisica == nil {
+		errors["pessoa_fisica"] = "é nescessário preencher os dados de pessoa física pra continuar"
+	}
 
-	eval.CheckField(shared.NotBlank(req.Telefone), "telefone", "esse campo não pode ser vazio")
-	eval.CheckField(shared.NotBlank(req.Email), "email", "esse campo não pode ser vazio")
+	if req.Categoria == 2 && req.PessoaJuridica == nil {
+		errors["pessoa_juridica"] = "é nescessário preencher os dados de pessoa jurídica pra continuar"
+	}
 
-	eval.CheckField(shared.NotBlank(req.PessoaFisica.Cpf), "cpf", "esse campo não pode ser vazio")
-	eval.CheckField(shared.NotBlank(req.PessoaFisica.NomeCompleto), "nome_completo", "esse campo não pode ser vazio")
-	eval.CheckField(shared.NotBlank(req.PessoaFisica.DataNascimento.String()), "data_nascimento", "esse campo não pode ser vazio")
+	if req.PessoaFisica == nil && req.PessoaJuridica == nil {
+		errors["dados_pessoais"] = "é nescessário preencher os dados de pessoa física ou jurídica pra continuar"
+	}
 
-	eval.CheckField(shared.NotBlank(req.PessoaJuridica.NomeFantasia), "nome_fantasia", "esse campo não pode ser vazio")
-	eval.CheckField(shared.NotBlank(req.PessoaJuridica.Cnpj), "cnpj", "esse campo não pode ser vazio")
-	eval.CheckField(shared.NotBlank(req.PessoaJuridica.DataCriacao.String()), "data_criacao", "esse campo não pode ser vazio")
+	if !shared.NotBlank(req.Telefone) {
+		errors["telefone"] = "esse campo não pode ser vazio"
+	}
 
-	return eval
+	if !shared.NotBlank(req.Email) {
+		errors["email"] = "esse campo não pode ser vazio"
+	} else if !shared.IsEmail(req.Email) {
+		errors["email"] = "esse campo precisa ser um email válido"
+	}
+
+	if !shared.NotBlank(req.Senha) {
+		errors["senha"] = "esse campo não pode ser vazio"
+	} else if len(req.Senha) < 8 || len(req.Senha) > 35 {
+		errors["senha"] = "esse campo precisa ter o tamnho entre 8 e 35 caracteres"
+	}
+
+	if req.PessoaFisica != nil {
+		if !shared.NotBlank(req.PessoaFisica.Cpf) {
+			errors["cpf"] = "esse campo não pode ser vazio"
+		}
+
+		if !shared.NotBlank(req.PessoaFisica.NomeCompleto) {
+			errors["nome_completo"] = "esse campo não pode ser vazio"
+		}
+
+		if req.PessoaFisica.DataNascimento.IsZero() {
+			errors["data_nascimento"] = "esse campo não pode ser vazio"
+		}
+	}
+
+	if req.PessoaJuridica != nil {
+		if !shared.NotBlank(req.PessoaJuridica.NomeFantasia) {
+			errors["nome_fantasia"] = "esse campo não pode ser vazio"
+		}
+
+		if !shared.NotBlank(req.PessoaJuridica.Cnpj) {
+			errors["cnpj"] = "esse campo não pode ser vazio"
+		}
+
+		if req.PessoaJuridica.DataCriacao.IsZero() {
+			errors["data_criacao"] = "esse campo não pode ser vazio"
+		}
+	}
+
+	return errors
 }
