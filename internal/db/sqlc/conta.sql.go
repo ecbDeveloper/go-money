@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAccount = `-- name: CreateAccount :one
@@ -21,4 +22,46 @@ func (q *Queries) CreateAccount(ctx context.Context, idCliente uuid.UUID) (uuid.
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getAllAccountsByClientId = `-- name: GetAllAccountsByClientId :many
+SELECT id, saldo, id_cliente, data_abertura FROM conta
+WHERE id_cliente = $1
+`
+
+func (q *Queries) GetAllAccountsByClientId(ctx context.Context, idCliente uuid.UUID) ([]Contum, error) {
+	rows, err := q.db.Query(ctx, getAllAccountsByClientId, idCliente)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Contum
+	for rows.Next() {
+		var i Contum
+		if err := rows.Scan(
+			&i.ID,
+			&i.Saldo,
+			&i.IDCliente,
+			&i.DataAbertura,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getBalanceByAccountId = `-- name: GetBalanceByAccountId :one
+SELECT saldo FROM conta
+WHERE id = $1
+`
+
+func (q *Queries) GetBalanceByAccountId(ctx context.Context, id uuid.UUID) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getBalanceByAccountId, id)
+	var saldo pgtype.Numeric
+	err := row.Scan(&saldo)
+	return saldo, err
 }
