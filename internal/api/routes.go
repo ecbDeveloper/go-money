@@ -9,24 +9,31 @@ import (
 )
 
 func (api *Api) BindRoutes() {
-	api.Router.Use(middleware.RequestID, middleware.Logger, middleware.Recoverer, api.Sessions.LoadAndSave)
-	_ = csrf.Protect(
+	api.Router.Use(middleware.RequestID, middleware.Recoverer, middleware.Logger, api.Sessions.LoadAndSave)
+
+	csrfMiddleware := csrf.Protect(
 		[]byte(os.Getenv("CSRF_SECRET")),
 		csrf.Secure(false),
 	)
 
-	api.Router.Route("/api/v1", func(r chi.Router) {
-		r.Post("/client", api.handleCreateClient)
-		r.Post("/client/login", api.handleLoginClient)
+	api.Router.Use(csrfMiddleware)
 
-		r.Get("/account/{accountId}/balance", api.handleGetAccountBalanceById)
+	api.Router.Route("/api", func(r chi.Router) {
+		r.Route("/v1", func(r chi.Router) {
+			r.Get("/csrf", api.handleGetCSRFToken)
 
-		r.Post("/account", api.handleCreateAccount)
-		r.Post("/account/transaction", api.handleAccountTransaction)
-		r.Post("/account/transfer", api.handleMoneyTransfer)
+			r.Post("/client", api.handleCreateClient)
+			r.Post("/client/login", api.handleLoginClient)
 
-		api.Router.Group(func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+
+				r.Get("/account/{accountId}/balance", api.handleGetAccountBalanceById)
+
+				r.Post("/account", api.handleCreateAccount)
+				r.Post("/account/transfer", api.handleMoneyTransfer)
+				r.Post("/account/transaction", api.handleAccountTransaction)
+				r.Delete("/account/{accountId}", api.handleDeleteAccount)
+			})
 		})
-
 	})
 }
