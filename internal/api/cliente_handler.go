@@ -76,11 +76,10 @@ func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errs := credentials.Validate()
-	if len(errs) > 0 {
-
+	validationErrs := credentials.Validate()
+	if len(validationErrs) > 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(errs)
+		json.NewEncoder(w).Encode(validationErrs)
 		return
 	}
 

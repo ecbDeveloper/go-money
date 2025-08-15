@@ -7,13 +7,17 @@ import (
 	"github.com/ecbDeveloper/go-money/internal/db/sqlc"
 	"github.com/ecbDeveloper/go-money/internal/shared"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
 	ErrAccountNotFoundedOrNotOwned = errors.New("conta não encontrada ou não pertence ao cliente")
+	ErrAccountNotFounded           = errors.New("conta de destino não encontrada")
 	ErrInvalidOperation            = errors.New("operação inválida")
+	ErrCantTransferToSameAccount   = errors.New("não é possível transferir dinheiro pra própria conta")
+	ErrInsufficientBalance         = errors.New("saldo insuficiente para realizar a transação")
 )
 
 type AccountService struct {
@@ -96,9 +100,13 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 		return ErrAccountNotFoundedOrNotOwned
 	}
 
-	actualAccountBalanceFloat, err := shared.ConvertNumericToFloat(actualAccountBalance)
+	actualAccountBalanceF, err := shared.ConvertNumericToFloat(actualAccountBalance)
 	if err != nil {
 		return err
+	}
+
+	if operationType == 1 && (actualAccountBalanceF <= 0 || value > actualAccountBalanceF) {
+		return ErrInsufficientBalance
 	}
 
 	valueNumeric, err := shared.ConvertFloatToNumeric(value)
@@ -109,12 +117,12 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 	var newBalanceNumeric pgtype.Numeric
 	switch operationType {
 	case 1:
-		newBalanceNumeric, err = shared.ConvertFloatToNumeric(actualAccountBalanceFloat + value)
+		newBalanceNumeric, err = shared.ConvertFloatToNumeric(actualAccountBalanceF + value)
 		if err != nil {
 			return err
 		}
 	case 2:
-		newBalanceNumeric, err = shared.ConvertFloatToNumeric(actualAccountBalanceFloat - value)
+		newBalanceNumeric, err = shared.ConvertFloatToNumeric(actualAccountBalanceF - value)
 		if err != nil {
 			return err
 		}
@@ -142,6 +150,92 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 	err = queries.CreateTransferencia(ctx, transferArgs)
 	if err != nil {
 		tx.Rollback(ctx)
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, originAccountId, clientId uuid.UUID, value float64) error {
+	if originAccountId == destinyAccountId {
+		return ErrCantTransferToSameAccount
+	}
+
+	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientId)
+	if err != nil {
+		return err
+	}
+
+	accountFounded := false
+	var originActualBalance pgtype.Numeric
+	for _, account := range clientAccounts {
+		if originAccountId == account.ID {
+			originActualBalance = account.Saldo
+			accountFounded = true
+			break
+		}
+	}
+
+	if !accountFounded {
+		return ErrAccountNotFoundedOrNotOwned
+	}
+
+	destinyActualBalance, err := a.queries.GetBalanceByAccountId(ctx, destinyAccountId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAccountNotFounded
+		}
+		return err
+	}
+
+	destinyActualBalanceF, err := shared.ConvertNumericToFloat(destinyActualBalance)
+	if err != nil {
+		return err
+	}
+
+	originActualBalanceF, err := shared.ConvertNumericToFloat(originActualBalance)
+	if err != nil {
+		return err
+	}
+
+	if originActualBalanceF <= 0 || value > originActualBalanceF {
+		return ErrInsufficientBalance
+	}
+
+	destinyNewBalance, err := shared.ConvertFloatToNumeric(destinyActualBalanceF + value)
+	if err != nil {
+		return err
+	}
+
+	originNewBalance, err := shared.ConvertFloatToNumeric(originActualBalanceF - value)
+	if err != nil {
+		return err
+	}
+
+	tx, err := a.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	queries := sqlc.New(tx)
+
+	err = queries.PutMoneyInAccount(ctx, sqlc.PutMoneyInAccountParams{
+		ID:    destinyAccountId,
+		Saldo: destinyNewBalance,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = queries.PutMoneyInAccount(ctx, sqlc.PutMoneyInAccountParams{
+		ID:    originAccountId,
+		Saldo: originNewBalance,
+	})
+	if err != nil {
 		return err
 	}
 

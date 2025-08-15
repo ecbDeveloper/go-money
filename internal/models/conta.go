@@ -25,3 +25,27 @@ func (d AccountTransaction) Validate() map[string]string {
 
 	return errors
 }
+
+type TransferMoney struct {
+	Valor          float64 `json:"valor"`
+	IdContaDestino string  `json:"id_conta_destino"`
+	IdContaOrigem  string  `json:"id_conta_origem"`
+}
+
+func (d TransferMoney) Validate() map[string]string {
+	errors := make(map[string]string)
+
+	if d.Valor < 0.01 {
+		errors["valor"] = "depósito precisa ser maior que R$0,00"
+	}
+
+	if shared.IsBlank(d.IdContaDestino) {
+		errors["id_conta_destino"] = "esse campo não pode ser vazio"
+	}
+
+	if shared.IsBlank(d.IdContaOrigem) {
+		errors["id_conta_origem"] = "esse campo não pode ser vazio"
+	}
+
+	return errors
+}
