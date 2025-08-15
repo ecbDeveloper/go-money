@@ -46,28 +46,28 @@ func (req CreateClient) Validate() map[string]string {
 		errors["dados_pessoais"] = "é nescessário preencher os dados de pessoa física ou jurídica pra continuar"
 	}
 
-	if !shared.NotBlank(req.Telefone) {
+	if shared.IsBlank(req.Telefone) {
 		errors["telefone"] = "esse campo não pode ser vazio"
 	}
 
-	if !shared.NotBlank(req.Email) {
+	if shared.IsBlank(req.Email) {
 		errors["email"] = "esse campo não pode ser vazio"
 	} else if !shared.IsEmail(req.Email) {
 		errors["email"] = "esse campo precisa ser um email válido"
 	}
 
-	if !shared.NotBlank(req.Senha) {
+	if shared.IsBlank(req.Senha) {
 		errors["senha"] = "esse campo não pode ser vazio"
 	} else if len(req.Senha) < 8 || len(req.Senha) > 35 {
 		errors["senha"] = "esse campo precisa ter o tamnho entre 8 e 35 caracteres"
 	}
 
 	if req.PessoaFisica != nil {
-		if !shared.NotBlank(req.PessoaFisica.Cpf) {
+		if shared.IsBlank(req.PessoaFisica.Cpf) {
 			errors["cpf"] = "esse campo não pode ser vazio"
 		}
 
-		if !shared.NotBlank(req.PessoaFisica.NomeCompleto) {
+		if shared.IsBlank(req.PessoaFisica.NomeCompleto) {
 			errors["nome_completo"] = "esse campo não pode ser vazio"
 		}
 
@@ -77,11 +77,11 @@ func (req CreateClient) Validate() map[string]string {
 	}
 
 	if req.PessoaJuridica != nil {
-		if !shared.NotBlank(req.PessoaJuridica.NomeFantasia) {
+		if shared.IsBlank(req.PessoaJuridica.NomeFantasia) {
 			errors["nome_fantasia"] = "esse campo não pode ser vazio"
 		}
 
-		if !shared.NotBlank(req.PessoaJuridica.Cnpj) {
+		if shared.IsBlank(req.PessoaJuridica.Cnpj) {
 			errors["cnpj"] = "esse campo não pode ser vazio"
 		}
 
@@ -101,13 +101,13 @@ type AuthenticateClient struct {
 func (req AuthenticateClient) Validate() map[string]string {
 	errors := make(map[string]string)
 
-	if !shared.NotBlank(req.Email) {
+	if shared.IsBlank(req.Email) {
 		errors["email"] = "esse campo precisa ser preenchido"
 	} else if !shared.IsEmail(req.Email) {
 		errors["email"] = "esse campo precisa ser um email válido"
 	}
 
-	if !shared.NotBlank(req.Senha) {
+	if shared.IsBlank(req.Senha) {
 		errors["senha"] = "esse campo precisa ser preenchido"
 	}
 
