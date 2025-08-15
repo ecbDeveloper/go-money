@@ -25,7 +25,7 @@ func (q *Queries) CreateAccount(ctx context.Context, idCliente uuid.UUID) (uuid.
 }
 
 const getAllAccountsByClientId = `-- name: GetAllAccountsByClientId :many
-SELECT id, saldo, id_cliente, data_abertura FROM conta
+SELECT id, saldo, id_cliente, data_abertura, status FROM conta
 WHERE id_cliente = $1
 `
 
@@ -43,6 +43,7 @@ func (q *Queries) GetAllAccountsByClientId(ctx context.Context, idCliente uuid.U
 			&i.Saldo,
 			&i.IDCliente,
 			&i.DataAbertura,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -66,18 +67,34 @@ func (q *Queries) GetBalanceByAccountId(ctx context.Context, id uuid.UUID) (pgty
 	return saldo, err
 }
 
-const putMoneyInAccount = `-- name: PutMoneyInAccount :exec
+const updateAccountBalance = `-- name: UpdateAccountBalance :exec
 UPDATE conta
 	SET saldo = $1
 WHERE id = $2
 `
 
-type PutMoneyInAccountParams struct {
+type UpdateAccountBalanceParams struct {
 	Saldo pgtype.Numeric `json:"saldo"`
 	ID    uuid.UUID      `json:"id"`
 }
 
-func (q *Queries) PutMoneyInAccount(ctx context.Context, arg PutMoneyInAccountParams) error {
-	_, err := q.db.Exec(ctx, putMoneyInAccount, arg.Saldo, arg.ID)
+func (q *Queries) UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) error {
+	_, err := q.db.Exec(ctx, updateAccountBalance, arg.Saldo, arg.ID)
+	return err
+}
+
+const updateAccountStatus = `-- name: UpdateAccountStatus :exec
+UPDATE conta 
+	SET status = $1
+WHERE id = $2
+`
+
+type UpdateAccountStatusParams struct {
+	Status pgtype.Int4 `json:"status"`
+	ID     uuid.UUID   `json:"id"`
+}
+
+func (q *Queries) UpdateAccountStatus(ctx context.Context, arg UpdateAccountStatusParams) error {
+	_, err := q.db.Exec(ctx, updateAccountStatus, arg.Status, arg.ID)
 	return err
 }

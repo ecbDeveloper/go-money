@@ -116,9 +116,9 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		slog.Error("failed to get authenticated client id")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
-			"erro": "acesso negado: faça login para continuar",
+			"erro": "erro inesperado, tente novamente mais tarde",
 		})
 		return
 	}
@@ -200,9 +200,9 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		slog.Error("failed to get authenticated client id")
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
-			"erro": "acesso negado: faça login para continuar",
+			"erro": "erro inesperado, tente novamente mais tarde",
 		})
 		return
 	}
@@ -253,5 +253,62 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"mensagem": "transferência realizada com sucesso",
+	})
+}
+
+func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	rawAccountId := chi.URLParam(r, "accountId")
+
+	accoutnId, err := uuid.Parse(rawAccountId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"erro": "formato do id da conta de destino inválido",
+		})
+		return
+	}
+
+	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
+	if !ok {
+		slog.Error("failed to get authenticated client id")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"erro": "erro inesperado, tente novamente mais tarde",
+		})
+		return
+	}
+
+	err = api.AccountService.DeleteAccount(r.Context(), accoutnId, clientId)
+	if err != nil {
+		slog.Error("failed to delete account", "error", err)
+
+		if errors.Is(err, services.ErrAccountNotFoundedOrNotOwned) {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{
+				"erro": err.Error(),
+			})
+			return
+		}
+
+		if errors.Is(err, services.ErrBalanceGreaterThenZero) {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"erro": err.Error(),
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"erro": "erro interno inesperado no servidor",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"mensagem": "conta deletada com sucesso",
 	})
 }

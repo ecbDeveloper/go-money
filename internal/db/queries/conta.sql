@@ -10,7 +10,12 @@ WHERE id_cliente = $1;
 SELECT saldo FROM conta
 WHERE id = $1;
 
--- name: PutMoneyInAccount :exec
+-- name: UpdateAccountBalance :exec
 UPDATE conta
 	SET saldo = $1
+WHERE id = $2;
+
+-- name: UpdateAccountStatus :exec
+UPDATE conta 
+	SET status = $1
 WHERE id = $2;

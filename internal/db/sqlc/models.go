@@ -30,6 +30,7 @@ type Contum struct {
 	Saldo        pgtype.Numeric     `json:"saldo"`
 	IDCliente    uuid.UUID          `json:"id_cliente"`
 	DataAbertura pgtype.Timestamptz `json:"data_abertura"`
+	Status       pgtype.Int4        `json:"status"`
 }
 
 type PessoaFisica struct {
@@ -52,6 +53,11 @@ type Session struct {
 	Token  string    `json:"token"`
 	Data   []byte    `json:"data"`
 	Expiry time.Time `json:"expiry"`
+}
+
+type StatusContum struct {
+	ID     int32       `json:"id"`
+	Status pgtype.Text `json:"status"`
 }
 
 type TipoTransferencium struct {

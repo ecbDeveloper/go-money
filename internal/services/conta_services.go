@@ -18,6 +18,7 @@ var (
 	ErrInvalidOperation            = errors.New("operação inválida")
 	ErrCantTransferToSameAccount   = errors.New("não é possível transferir dinheiro pra própria conta")
 	ErrInsufficientBalance         = errors.New("saldo insuficiente para realizar a transação")
+	ErrBalanceGreaterThenZero      = errors.New("há saldo na sua conta, saque ou transfira-o para deletar a conta")
 )
 
 type AccountService struct {
@@ -130,7 +131,7 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 		return ErrInvalidOperation
 	}
 
-	depositArgs := sqlc.PutMoneyInAccountParams{
+	depositArgs := sqlc.UpdateAccountBalanceParams{
 		Saldo: newBalanceNumeric,
 		ID:    accountId,
 	}
@@ -141,7 +142,7 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 		Tipo:    operationType,
 	}
 
-	err = queries.PutMoneyInAccount(ctx, depositArgs)
+	err = queries.UpdateAccountBalance(ctx, depositArgs)
 	if err != nil {
 		tx.Rollback(ctx)
 		return err
@@ -223,7 +224,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 
 	queries := sqlc.New(tx)
 
-	err = queries.PutMoneyInAccount(ctx, sqlc.PutMoneyInAccountParams{
+	err = queries.UpdateAccountBalance(ctx, sqlc.UpdateAccountBalanceParams{
 		ID:    destinyAccountId,
 		Saldo: destinyNewBalance,
 	})
@@ -231,7 +232,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 		return err
 	}
 
-	err = queries.PutMoneyInAccount(ctx, sqlc.PutMoneyInAccountParams{
+	err = queries.UpdateAccountBalance(ctx, sqlc.UpdateAccountBalanceParams{
 		ID:    originAccountId,
 		Saldo: originNewBalance,
 	})
@@ -240,6 +241,50 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AccountService) DeleteAccount(ctx context.Context, accountId, clientId uuid.UUID) error {
+	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientId)
+	if err != nil {
+		return err
+	}
+
+	accountFounded := false
+	var actualBalance pgtype.Numeric
+	for _, account := range clientAccounts {
+		if accountId == account.ID {
+			actualBalance = account.Saldo
+			accountFounded = true
+			break
+		}
+	}
+
+	if !accountFounded {
+		return ErrAccountNotFoundedOrNotOwned
+	}
+
+	actualBalanceF, err := shared.ConvertNumericToFloat(actualBalance)
+	if err != nil {
+		return err
+	}
+
+	if actualBalanceF > 0 {
+		return ErrBalanceGreaterThenZero
+	}
+
+	accountStatus := sqlc.UpdateAccountStatusParams{
+		Status: pgtype.Int4{
+			Int32: 1,
+			Valid: true,
+		},
+		ID: accountId,
+	}
+
+	if err := a.queries.UpdateAccountStatus(ctx, accountStatus); err != nil {
 		return err
 	}
 
