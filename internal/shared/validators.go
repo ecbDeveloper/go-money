@@ -6,8 +6,8 @@ import (
 	"unicode/utf8"
 )
 
-func NotBlank(value string) bool {
-	return strings.TrimSpace(value) != ""
+func IsBlank(value string) bool {
+	return strings.TrimSpace(value) == ""
 }
 
 func IsEmail(email string) bool {
