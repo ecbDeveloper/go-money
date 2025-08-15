@@ -94,7 +94,7 @@ func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": "erro interno inesperado no servidor",
+			"erro": "erro interno inesperado no servidor",
 		})
 		return
 	}
