@@ -1,7 +1,6 @@
 package api
 
 import (
-	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
@@ -11,7 +10,7 @@ import (
 
 func (api *Api) BindRoutes() {
 	api.Router.Use(middleware.RequestID, middleware.Logger, middleware.Recoverer, api.Sessions.LoadAndSave)
-	csrfMiddleware := csrf.Protect(
+	_ = csrf.Protect(
 		[]byte(os.Getenv("CSRF_SECRET")),
 		csrf.Secure(false),
 	)
@@ -21,10 +20,9 @@ func (api *Api) BindRoutes() {
 		r.Post("/client/login", api.handleLoginClient)
 		r.Post("/account", api.handleCreateAccount)
 		r.Get("/account/{accountId}/balance", api.handleGetAccountBalanceById)
+		r.Post("/account/transaction", api.handleAccountTransaction)
 
 		api.Router.Group(func(r chi.Router) {
-			r.Use(csrfMiddleware)
-			r.Post("/", func(w http.ResponseWriter, r *http.Request) {})
 		})
 
 	})

@@ -65,3 +65,19 @@ func (q *Queries) GetBalanceByAccountId(ctx context.Context, id uuid.UUID) (pgty
 	err := row.Scan(&saldo)
 	return saldo, err
 }
+
+const putMoneyInAccount = `-- name: PutMoneyInAccount :exec
+UPDATE conta
+	SET saldo = $1
+WHERE id = $2
+`
+
+type PutMoneyInAccountParams struct {
+	Saldo pgtype.Numeric `json:"saldo"`
+	ID    uuid.UUID      `json:"id"`
+}
+
+func (q *Queries) PutMoneyInAccount(ctx context.Context, arg PutMoneyInAccountParams) error {
+	_, err := q.db.Exec(ctx, putMoneyInAccount, arg.Saldo, arg.ID)
+	return err
+}
