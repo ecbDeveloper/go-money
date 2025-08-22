@@ -33,24 +33,24 @@ func NewAccountService(pool *pgxpool.Pool) AccountService {
 	}
 }
 
-func (a *AccountService) CreateAccount(ctx context.Context, clientId uuid.UUID) (uuid.UUID, error) {
-	accountId, err := a.queries.CreateAccount(ctx, clientId)
+func (a *AccountService) CreateAccount(ctx context.Context, clientID uuid.UUID) (uuid.UUID, error) {
+	accountID, err := a.queries.CreateAccount(ctx, clientID)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
 
-	return accountId, nil
+	return accountID, nil
 }
 
-func (a *AccountService) GetAccountBalanceById(ctx context.Context, accountId, clientId uuid.UUID) (float64, error) {
-	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientId)
+func (a *AccountService) GetAccountBalanceByID(ctx context.Context, accountID, clientID uuid.UUID) (float64, error) {
+	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientID)
 	if err != nil {
 		return 0, err
 	}
 
 	accountFounded := false
 	for _, account := range clientAccounts {
-		if account.IDCliente == clientId {
+		if account.IDCliente == clientID {
 			accountFounded = true
 			break
 		}
@@ -60,7 +60,7 @@ func (a *AccountService) GetAccountBalanceById(ctx context.Context, accountId, c
 		return 0, ErrAccountNotFoundedOrNotOwned
 	}
 
-	balance, err := a.queries.GetBalanceByAccountId(ctx, accountId)
+	balance, err := a.queries.GetBalanceByAccountId(ctx, accountID)
 	if err != nil {
 		return 0, err
 	}
@@ -73,7 +73,7 @@ func (a *AccountService) GetAccountBalanceById(ctx context.Context, accountId, c
 	return balanceF.Float64, nil
 }
 
-func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clientId uuid.UUID, value float64, operationType int32) error {
+func (a *AccountService) AccountTransaction(ctx context.Context, accountID, clientID uuid.UUID, value float64, operationType int32) error {
 	tx, err := a.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 
 	queries := sqlc.New(tx)
 
-	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientId)
+	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientID)
 	if err != nil {
 		tx.Rollback(ctx)
 		return err
@@ -90,7 +90,7 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 	accountFounded := false
 	var actualAccountBalance pgtype.Numeric
 	for _, account := range clientAccounts {
-		if accountId == account.ID {
+		if accountID == account.ID {
 			actualAccountBalance = account.Saldo
 			accountFounded = true
 			break
@@ -133,11 +133,11 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 
 	depositArgs := sqlc.UpdateAccountBalanceParams{
 		Saldo: newBalanceNumeric,
-		ID:    accountId,
+		ID:    accountID,
 	}
 
 	transferArgs := sqlc.CreateTransferenciaParams{
-		IDConta: accountId,
+		IDConta: accountID,
 		Valor:   valueNumeric,
 		Tipo:    operationType,
 	}
@@ -161,8 +161,8 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountId, clie
 	return nil
 }
 
-func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, originAccountId, clientId uuid.UUID, value float64) error {
-	if originAccountId == destinyAccountId {
+func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountID, originAccountID, clientID uuid.UUID, value float64) error {
+	if originAccountID == destinyAccountID {
 		return ErrCantTransferToSameAccount
 	}
 
@@ -173,7 +173,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 
 	queries := sqlc.New(tx)
 
-	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientId)
+	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientID)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 	accountFounded := false
 	var originActualBalance pgtype.Numeric
 	for _, account := range clientAccounts {
-		if originAccountId == account.ID {
+		if originAccountID == account.ID {
 			originActualBalance = account.Saldo
 			accountFounded = true
 			break
@@ -192,7 +192,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 		return ErrAccountNotFoundedOrNotOwned
 	}
 
-	destinyActualBalance, err := queries.GetBalanceByAccountId(ctx, destinyAccountId)
+	destinyActualBalance, err := queries.GetBalanceByAccountId(ctx, destinyAccountID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrAccountNotFounded
@@ -225,7 +225,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 	}
 
 	err = queries.UpdateAccountBalance(ctx, sqlc.UpdateAccountBalanceParams{
-		ID:    destinyAccountId,
+		ID:    destinyAccountID,
 		Saldo: destinyNewBalance,
 	})
 	if err != nil {
@@ -233,7 +233,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 	}
 
 	err = queries.UpdateAccountBalance(ctx, sqlc.UpdateAccountBalanceParams{
-		ID:    originAccountId,
+		ID:    originAccountID,
 		Saldo: originNewBalance,
 	})
 	if err != nil {
@@ -247,8 +247,8 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 	return nil
 }
 
-func (a *AccountService) DeleteAccount(ctx context.Context, accountId, clientId uuid.UUID) error {
-	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientId)
+func (a *AccountService) DeleteAccount(ctx context.Context, accountID, clientID uuid.UUID) error {
+	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientID)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (a *AccountService) DeleteAccount(ctx context.Context, accountId, clientId 
 	accountFounded := false
 	var actualBalance pgtype.Numeric
 	for _, account := range clientAccounts {
-		if accountId == account.ID {
+		if accountID == account.ID {
 			actualBalance = account.Saldo
 			accountFounded = true
 			break
@@ -281,7 +281,7 @@ func (a *AccountService) DeleteAccount(ctx context.Context, accountId, clientId 
 			Int32: 2,
 			Valid: true,
 		},
-		ID: accountId,
+		ID: accountID,
 	}
 
 	if err := a.queries.UpdateAccountStatus(ctx, accountStatus); err != nil {

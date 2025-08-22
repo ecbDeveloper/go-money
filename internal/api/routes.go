@@ -26,9 +26,8 @@ func (api *Api) BindRoutes() {
 			r.Post("/client/login", api.handleLoginClient)
 
 			r.Group(func(r chi.Router) {
-
-				r.Get("/account/{accountId}/balance", api.handleGetAccountBalanceById)
-
+				r.Use(api.authMiddeware)
+				r.Get("/account/{accountId}/balance", api.handleGetAccountBalanceByID)
 				r.Post("/account", api.handleCreateAccount)
 				r.Post("/account/transfer", api.handleMoneyTransfer)
 				r.Post("/account/transaction", api.handleAccountTransaction)

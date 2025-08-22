@@ -4,7 +4,7 @@ import "github.com/ecbDeveloper/go-money/internal/shared"
 
 type AccountTransaction struct {
 	Valor        float64 `json:"valor"`
-	IdConta      string  `json:"id_conta"`
+	IDConta      string  `json:"id_conta"`
 	TipoOperacao int32   `json:"tipo_operacao"`
 }
 
@@ -15,7 +15,7 @@ func (d AccountTransaction) Validate() map[string]string {
 		errors["valor"] = "depósito precisa ser maior que R$0,00"
 	}
 
-	if shared.IsBlank(d.IdConta) {
+	if shared.IsBlank(d.IDConta) {
 		errors["id_conta"] = "esse campo não pode ser vazio"
 	}
 
@@ -28,8 +28,8 @@ func (d AccountTransaction) Validate() map[string]string {
 
 type TransferMoney struct {
 	Valor          float64 `json:"valor"`
-	IdContaDestino string  `json:"id_conta_destino"`
-	IdContaOrigem  string  `json:"id_conta_origem"`
+	IDContaDestino string  `json:"id_conta_destino"`
+	IDContaOrigem  string  `json:"id_conta_origem"`
 }
 
 func (d TransferMoney) Validate() map[string]string {
@@ -39,11 +39,11 @@ func (d TransferMoney) Validate() map[string]string {
 		errors["valor"] = "depósito precisa ser maior que R$0,00"
 	}
 
-	if shared.IsBlank(d.IdContaDestino) {
+	if shared.IsBlank(d.IDContaDestino) {
 		errors["id_conta_destino"] = "esse campo não pode ser vazio"
 	}
 
-	if shared.IsBlank(d.IdContaOrigem) {
+	if shared.IsBlank(d.IDContaOrigem) {
 		errors["id_conta_origem"] = "esse campo não pode ser vazio"
 	}
 

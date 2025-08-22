@@ -16,7 +16,7 @@ import (
 func (api *Api) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
+	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -25,7 +25,7 @@ func (api *Api) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accountId, err := api.AccountService.CreateAccount(r.Context(), clientId)
+	accountID, err := api.AccountService.CreateAccount(r.Context(), clientID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -37,14 +37,14 @@ func (api *Api) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{
 		"mensagem": "conta bancária criada com sucesso",
-		"id_conta": accountId,
+		"id_conta": accountID,
 	})
 }
 
-func (api *Api) handleGetAccountBalanceById(w http.ResponseWriter, r *http.Request) {
+func (api *Api) handleGetAccountBalanceByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
+	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -53,9 +53,9 @@ func (api *Api) handleGetAccountBalanceById(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	rawAccountId := chi.URLParam(r, "accountId")
+	rawAccountID := chi.URLParam(r, "accountID")
 
-	accountId, err := uuid.Parse(rawAccountId)
+	accountID, err := uuid.Parse(rawAccountID)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -64,7 +64,7 @@ func (api *Api) handleGetAccountBalanceById(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	balance, err := api.AccountService.GetAccountBalanceById(r.Context(), accountId, clientId)
+	balance, err := api.AccountService.GetAccountBalanceByID(r.Context(), accountID, clientID)
 	if err != nil {
 		if errors.Is(err, services.ErrAccountNotFoundedOrNotOwned) {
 			w.WriteHeader(http.StatusBadRequest)
@@ -105,7 +105,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	accountId, err := uuid.Parse(accountTransactionRequest.IdConta)
+	accountID, err := uuid.Parse(accountTransactionRequest.IDConta)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -113,7 +113,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 		})
 	}
 
-	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
+	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		slog.Error("failed to get authenticated client id")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -123,7 +123,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = api.AccountService.AccountTransaction(r.Context(), accountId, clientId, accountTransactionRequest.Valor, accountTransactionRequest.TipoOperacao)
+	err = api.AccountService.AccountTransaction(r.Context(), accountID, clientID, accountTransactionRequest.Valor, accountTransactionRequest.TipoOperacao)
 	if err != nil {
 		slog.Error("failed to deposit money on client account", "error", err)
 
@@ -179,7 +179,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	destinyAccountId, err := uuid.Parse(transferMoneyRequest.IdContaDestino)
+	destinyAccountID, err := uuid.Parse(transferMoneyRequest.IDContaDestino)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -188,7 +188,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	originAccountId, err := uuid.Parse(transferMoneyRequest.IdContaOrigem)
+	originAccountID, err := uuid.Parse(transferMoneyRequest.IDContaOrigem)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -197,7 +197,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
+	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		slog.Error("failed to get authenticated client id")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -207,7 +207,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = api.AccountService.MoneyTransfer(r.Context(), destinyAccountId, originAccountId, clientId, transferMoneyRequest.Valor)
+	err = api.AccountService.MoneyTransfer(r.Context(), destinyAccountID, originAccountID, clientID, transferMoneyRequest.Valor)
 	if err != nil {
 		slog.Error("failed to make transfer", "error", err)
 
@@ -259,9 +259,9 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	rawAccountId := chi.URLParam(r, "accountId")
+	rawAccountID := chi.URLParam(r, "accountID")
 
-	accoutnId, err := uuid.Parse(rawAccountId)
+	accountID, err := uuid.Parse(rawAccountID)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -270,7 +270,7 @@ func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientId, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
+	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
 	if !ok {
 		slog.Error("failed to get authenticated client id")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -280,7 +280,7 @@ func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = api.AccountService.DeleteAccount(r.Context(), accoutnId, clientId)
+	err = api.AccountService.DeleteAccount(r.Context(), accountID, clientID)
 	if err != nil {
 		slog.Error("failed to delete account", "error", err)
 

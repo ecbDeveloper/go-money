@@ -57,7 +57,7 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 		Password: hashedPassword,
 	}
 
-	clientId, err := queries.CreateClient(ctx, arguments)
+	clientID, err := queries.CreateClient(ctx, arguments)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok {
 			if pgErr.Code == "23505" {
@@ -71,7 +71,7 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 	switch client.Categoria {
 	case 1:
 		arguments := sqlc.CreatePessoaFisicaParams{
-			IDCliente:      clientId,
+			IDCliente:      clientID,
 			NomeCompleto:   client.PessoaFisica.NomeCompleto,
 			DataNascimento: client.PessoaFisica.DataNascimento,
 			Cpf:            client.PessoaFisica.Cpf,
@@ -91,7 +91,7 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 
 	case 2:
 		arguments := sqlc.CreatePessoaJuridicaParams{
-			IDCliente:    clientId,
+			IDCliente:    clientID,
 			DataCriacao:  client.PessoaJuridica.DataCriacao,
 			NomeFantasia: client.PessoaJuridica.NomeFantasia,
 			Cnpj:         client.PessoaJuridica.Cnpj,
@@ -117,7 +117,7 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 		return uuid.UUID{}, err
 	}
 
-	return clientId, nil
+	return clientID, nil
 }
 
 func (c *ClientService) AuthenticateClient(ctx context.Context, email, password string) (uuid.UUID, error) {

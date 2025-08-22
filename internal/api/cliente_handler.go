@@ -29,7 +29,7 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientId, err := api.ClientService.CreateClient(r.Context(), client)
+	clientID, err := api.ClientService.CreateClient(r.Context(), client)
 	if err != nil {
 		slog.Error("failed to create client", "error", err)
 
@@ -58,7 +58,7 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]any{
 		"mensagem":   "conta criada com sucesso",
-		"id_cliente": clientId,
+		"id_cliente": clientID,
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -83,7 +83,7 @@ func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientId, err := api.ClientService.AuthenticateClient(r.Context(), credentials.Email, credentials.Senha)
+	clientID, err := api.ClientService.AuthenticateClient(r.Context(), credentials.Email, credentials.Senha)
 	if err != nil {
 		slog.Error("failed to authenticate client", "error", err)
 		if errors.Is(err, services.ErrInvalidCredentials) {
@@ -105,7 +105,7 @@ func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.Sessions.Put(r.Context(), "AuthenticatedClient", clientId)
+	api.Sessions.Put(r.Context(), "AuthenticatedClient", clientID)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
