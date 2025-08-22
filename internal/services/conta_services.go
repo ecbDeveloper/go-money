@@ -166,7 +166,14 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 		return ErrCantTransferToSameAccount
 	}
 
-	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientId)
+	tx, err := a.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	queries := sqlc.New(tx)
+
+	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientId)
 	if err != nil {
 		return err
 	}
@@ -185,7 +192,7 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 		return ErrAccountNotFoundedOrNotOwned
 	}
 
-	destinyActualBalance, err := a.queries.GetBalanceByAccountId(ctx, destinyAccountId)
+	destinyActualBalance, err := queries.GetBalanceByAccountId(ctx, destinyAccountId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrAccountNotFounded
@@ -216,13 +223,6 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountId, or
 	if err != nil {
 		return err
 	}
-
-	tx, err := a.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-
-	queries := sqlc.New(tx)
 
 	err = queries.UpdateAccountBalance(ctx, sqlc.UpdateAccountBalanceParams{
 		ID:    destinyAccountId,
@@ -278,7 +278,7 @@ func (a *AccountService) DeleteAccount(ctx context.Context, accountId, clientId 
 
 	accountStatus := sqlc.UpdateAccountStatusParams{
 		Status: pgtype.Int4{
-			Int32: 1,
+			Int32: 2,
 			Valid: true,
 		},
 		ID: accountId,
