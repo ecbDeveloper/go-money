@@ -24,7 +24,7 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 	validationErrs := client.Validate()
 	if len(validationErrs) > 0 {
 
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(validationErrs)
 		return
 	}
@@ -78,7 +78,7 @@ func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
 
 	validationErrs := credentials.Validate()
 	if len(validationErrs) > 0 {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(validationErrs)
 		return
 	}

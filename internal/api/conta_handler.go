@@ -67,7 +67,7 @@ func (api *Api) handleGetAccountBalanceByID(w http.ResponseWriter, r *http.Reque
 	balance, err := api.AccountService.GetAccountBalanceByID(r.Context(), accountID, clientID)
 	if err != nil {
 		if errors.Is(err, services.ErrAccountNotFoundedOrNotOwned) {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
@@ -100,7 +100,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 
 	validationErrs := accountTransactionRequest.Validate()
 	if len(validationErrs) > 0 {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(validationErrs)
 		return
 	}
@@ -128,7 +128,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 		slog.Error("failed to deposit money on client account", "error", err)
 
 		if errors.Is(err, services.ErrAccountNotFoundedOrNotOwned) {
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
@@ -143,7 +143,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(map[string]string{
 			"erro": "erro interno inesperado no servidor",
 		})
@@ -174,7 +174,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 
 	validationErrs := transferMoneyRequest.Validate()
 	if len(validationErrs) > 0 {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(validationErrs)
 		return
 	}
@@ -220,7 +220,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errors.Is(err, services.ErrCantTransferToSameAccount) {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
@@ -228,7 +228,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errors.Is(err, services.ErrAccountNotFoundedOrNotOwned) {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
@@ -236,7 +236,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errors.Is(err, services.ErrInsufficientBalance) {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
@@ -285,7 +285,7 @@ func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to delete account", "error", err)
 
 		if errors.Is(err, services.ErrAccountNotFoundedOrNotOwned) {
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
@@ -293,7 +293,7 @@ func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errors.Is(err, services.ErrBalanceGreaterThenZero) {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(w).Encode(map[string]string{
 				"erro": err.Error(),
 			})
