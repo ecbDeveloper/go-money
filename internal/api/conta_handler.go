@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (api *Api) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
@@ -41,7 +41,7 @@ func (api *Api) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (api *Api) handleGetAccountBalanceByID(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleGetAccountBalanceByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	clientID, ok := api.Sessions.Get(r.Context(), "AuthenticatedClient").(uuid.UUID)
@@ -87,7 +87,7 @@ func (api *Api) handleGetAccountBalanceByID(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleAccountTransaction(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var accountTransactionRequest models.AccountTransaction
@@ -161,7 +161,7 @@ func (api *Api) handleAccountTransaction(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var transferMoneyRequest models.TransferMoney
@@ -256,7 +256,7 @@ func (api *Api) handleMoneyTransfer(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (api *Api) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	rawAccountID := chi.URLParam(r, "accountID")

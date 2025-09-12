@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/csrf"
 )
 
-func (api *Api) BindRoutes() {
+func (api *API) BindRoutes() {
 	api.Router.Use(middleware.RequestID, middleware.Recoverer, middleware.Logger, api.Sessions.LoadAndSave)
 
 	csrfMiddleware := csrf.Protect(

@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Api struct {
+type API struct {
 	Router         *chi.Mux
 	Sessions       *scs.SessionManager
 	ClientService  services.ClientService

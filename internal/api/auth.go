@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/csrf"
 )
 
-func (api *Api) authMiddeware(next http.Handler) http.Handler {
+func (api *API) authMiddeware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !api.Sessions.Exists(r.Context(), "AuthenticatedUserId") {
 			json.NewEncoder(w).Encode(map[string]string{
@@ -20,7 +20,7 @@ func (api *Api) authMiddeware(next http.Handler) http.Handler {
 	})
 }
 
-func (api *Api) handleGetCSRFToken(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleGetCSRFToken(w http.ResponseWriter, r *http.Request) {
 	token := csrf.Token(r)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{

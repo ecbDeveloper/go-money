@@ -10,7 +10,7 @@ import (
 	"github.com/ecbDeveloper/go-money/internal/services"
 )
 
-func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var client models.CreateClient
@@ -23,7 +23,6 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 
 	validationErrs := client.Validate()
 	if len(validationErrs) > 0 {
-
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(validationErrs)
 		return
@@ -65,7 +64,7 @@ func (api *Api) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (api *Api) handleLoginClient(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleLoginClient(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var credentials models.AuthenticateClient
