@@ -78,12 +78,12 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountID, clie
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 
-	queries := sqlc.New(tx)
+	queries := a.queries.WithTx(tx)
 
 	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientID)
 	if err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 
@@ -144,13 +144,11 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountID, clie
 
 	err = queries.UpdateAccountBalance(ctx, depositArgs)
 	if err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 
 	err = queries.CreateTransferencia(ctx, transferArgs)
 	if err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 
@@ -170,8 +168,9 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountID, or
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 
-	queries := sqlc.New(tx)
+	queries := a.queries.WithTx(tx)
 
 	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientID)
 	if err != nil {

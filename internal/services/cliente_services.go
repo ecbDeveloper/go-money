@@ -39,8 +39,9 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 	if err != nil {
 		return uuid.UUID{}, err
 	}
+	defer tx.Rollback(ctx)
 
-	queries := sqlc.New(tx)
+	queries := c.queries.WithTx(tx)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(client.Senha), 10)
 	if err != nil {
@@ -64,7 +65,6 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 				return uuid.UUID{}, ErrDuplicateEmail
 			}
 		}
-		tx.Rollback(ctx)
 		return uuid.UUID{}, err
 	}
 
@@ -85,7 +85,6 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 				}
 			}
 
-			tx.Rollback(ctx)
 			return uuid.UUID{}, err
 		}
 
@@ -105,7 +104,6 @@ func (c *ClientService) CreateClient(ctx context.Context, client models.CreateCl
 				}
 			}
 
-			tx.Rollback(ctx)
 			return uuid.UUID{}, err
 		}
 
