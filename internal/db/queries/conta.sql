@@ -19,3 +19,7 @@ WHERE id = $2;
 UPDATE conta 
 	SET status = $1
 WHERE id = $2;
+
+-- name: GetAccountForUpdate :one
+SELECT * FROM conta
+WHERE id = $1 FOR UPDATE;
