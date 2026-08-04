@@ -82,31 +82,24 @@ func (a *AccountService) AccountTransaction(ctx context.Context, accountID, clie
 
 	queries := a.queries.WithTx(tx)
 
-	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientID)
+	account, err := queries.GetAccountForUpdate(ctx, accountID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAccountNotFoundedOrNotOwned
+		}
 		return err
 	}
 
-	accountFounded := false
-	var actualAccountBalance pgtype.Numeric
-	for _, account := range clientAccounts {
-		if accountID == account.ID {
-			actualAccountBalance = account.Saldo
-			accountFounded = true
-			break
-		}
-	}
-
-	if !accountFounded {
+	if account.IDCliente != clientID {
 		return ErrAccountNotFoundedOrNotOwned
 	}
 
-	actualAccountBalanceF, err := shared.ConvertNumericToFloat(actualAccountBalance)
+	actualAccountBalanceF, err := shared.ConvertNumericToFloat(account.Saldo)
 	if err != nil {
 		return err
 	}
 
-	if operationType == 1 && (actualAccountBalanceF <= 0 || value > actualAccountBalanceF) {
+	if operationType == 2 && (actualAccountBalanceF <= 0 || value > actualAccountBalanceF) {
 		return ErrInsufficientBalance
 	}
 
@@ -172,26 +165,19 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountID, or
 
 	queries := a.queries.WithTx(tx)
 
-	clientAccounts, err := queries.GetAllAccountsByClientId(ctx, clientID)
+	originAccount, err := queries.GetAccountForUpdate(ctx, originAccountID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAccountNotFoundedOrNotOwned
+		}
 		return err
 	}
 
-	accountFounded := false
-	var originActualBalance pgtype.Numeric
-	for _, account := range clientAccounts {
-		if originAccountID == account.ID {
-			originActualBalance = account.Saldo
-			accountFounded = true
-			break
-		}
-	}
-
-	if !accountFounded {
+	if originAccount.IDCliente != clientID {
 		return ErrAccountNotFoundedOrNotOwned
 	}
 
-	destinyActualBalance, err := queries.GetBalanceByAccountId(ctx, destinyAccountID)
+	destinyAccount, err := queries.GetAccountForUpdate(ctx, destinyAccountID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrAccountNotFounded
@@ -199,12 +185,12 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountID, or
 		return err
 	}
 
-	destinyActualBalanceF, err := shared.ConvertNumericToFloat(destinyActualBalance)
+	destinyActualBalanceF, err := shared.ConvertNumericToFloat(destinyAccount.Saldo)
 	if err != nil {
 		return err
 	}
 
-	originActualBalanceF, err := shared.ConvertNumericToFloat(originActualBalance)
+	originActualBalanceF, err := shared.ConvertNumericToFloat(originAccount.Saldo)
 	if err != nil {
 		return err
 	}
@@ -247,26 +233,27 @@ func (a *AccountService) MoneyTransfer(ctx context.Context, destinyAccountID, or
 }
 
 func (a *AccountService) DeleteAccount(ctx context.Context, accountID, clientID uuid.UUID) error {
-	clientAccounts, err := a.queries.GetAllAccountsByClientId(ctx, clientID)
+	tx, err := a.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 
-	accountFounded := false
-	var actualBalance pgtype.Numeric
-	for _, account := range clientAccounts {
-		if accountID == account.ID {
-			actualBalance = account.Saldo
-			accountFounded = true
-			break
+	queries := a.queries.WithTx(tx)
+
+	account, err := queries.GetAccountForUpdate(ctx, accountID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrAccountNotFoundedOrNotOwned
 		}
+		return err
 	}
 
-	if !accountFounded {
+	if account.IDCliente != clientID {
 		return ErrAccountNotFoundedOrNotOwned
 	}
 
-	actualBalanceF, err := shared.ConvertNumericToFloat(actualBalance)
+	actualBalanceF, err := shared.ConvertNumericToFloat(account.Saldo)
 	if err != nil {
 		return err
 	}
@@ -283,7 +270,11 @@ func (a *AccountService) DeleteAccount(ctx context.Context, accountID, clientID 
 		ID: accountID,
 	}
 
-	if err := a.queries.UpdateAccountStatus(ctx, accountStatus); err != nil {
+	if err := queries.UpdateAccountStatus(ctx, accountStatus); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 
